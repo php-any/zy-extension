@@ -1,0 +1,126 @@
+{
+  "name": "origami-language",
+  "displayName": "Origami Language Support",
+  "description": "折言(origami-lang) 语言支持 - 融合 PHP 与 Go 特性的创新脚本语言",
+  "version": "0.0.1",
+  "publisher": "origami-lang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/origami-vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "origami",
+    "折言",
+    "php",
+    "go",
+    "scripting",
+    "concurrent"
+  ],
+  "activationEvents": [
+    "onLanguage:origami"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "origami",
+        "aliases": [
+          "Origami",
+          "origami",
+          "折言"
+        ],
+        "extensions": [
+          ".cjp",
+          ".cj"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/origami-light.svg",
+          "dark": "./icons/origami-dark.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "origami",
+        "scopeName": "source.origami",
+        "path": "./syntaxes/origami.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Origami Language Server",
+      "properties": {
+        "origami.languageServer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用/禁用 Origami 语言服务器"
+        },
+        "origami.languageServer.path": {
+          "type": "string",
+          "default": "",
+          "description": "Origami 语言服务器可执行文件路径（留空使用默认路径）"
+        },
+        "origami.languageServer.communicationMode": {
+          "type": "string",
+          "enum": [
+            "stdio",
+            "tcp"
+          ],
+          "default": "tcp",
+          "description": "语言服务器通信模式：stdio（标准输入输出）或 tcp（TCP网络连接）"
+        },
+        "origami.languageServer.tcpPort": {
+          "type": "number",
+          "default": 8080,
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "TCP模式下使用的端口号"
+        },
+        "origami.languageServer.verbose": {
+          "type": "boolean",
+          "default": false,
+          "description": "启用详细日志输出"
+        },
+        "origami.languageServer.logFile": {
+          "type": "string",
+          "default": "",
+          "description": "日志文件路径（留空输出到控制台）"
+        }
+      }
+    },
+    "scripts": {
+      "vscode:prepublish": "npm run compile",
+      "compile": "tsc -p ./",
+      "watch": "tsc -watch -p ./",
+      "pretest": "npm run compile && npm run lint",
+      "lint": "eslint src --ext ts",
+      "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+      "@types/vscode": "^1.74.0",
+      "@types/node": "16.x",
+      "@typescript-eslint/eslint-plugin": "^5.45.0",
+      "@typescript-eslint/parser": "^5.45.0",
+      "eslint": "^8.28.0",
+      "typescript": "^4.9.4"
+    },
+    "dependencies": {
+      "vscode-languageclient": "^8.1.0"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

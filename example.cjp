@@ -1,0 +1,136 @@
+<?php
+namespace App\Example;
+
+use Annotation\Route;
+use Annotation\Controller;
+use Annotation\GetMapping;
+use Annotation\Inject;
+
+/**
+ * Origami 语言示例文件
+ * 展示语法高亮和各种语言特性
+ */
+
+@Controller
+@Route(prefix: "/api/demo")
+class DemoController {
+    @Inject(service: "DemoService")
+    public $demoService;
+    
+    // 类型声明示例
+    private string $name = "Origami";
+    private int $version = 1;
+    private ?array $config = null;
+    
+    @GetMapping(path: "/hello")
+    public function sayHello(string $name = "World"): string {
+        // 字符串插值
+        $message = "Hello {$name} from Origami!";
+        $advanced = "Current time: @{date('Y-m-d H:i:s')}";
+        
+        return $message;
+    }
+    
+    // 中文关键字支持
+    函数 获取配置(): array {
+        if (this->config === null) {
+            this->config = [
+                "debug" => true,
+                "timeout" => 5000,
+                "features" => ["concurrency", "reflection"]
+            ];
+        }
+        
+        return this->config;
+    }
+    
+    public function processData(array $data): array {
+        // 数组方法链
+        $result = $data
+            ->map(fn($item) => $item * 2)
+            ->filter(fn($item) => $item > 10)
+            ->reduce(fn($acc, $item) => $acc + $item, 0);
+            
+        return $result;
+    }
+    
+    // 异步处理示例
+    public function asyncTask(): void {
+        spawn {
+            输出 "异步任务开始执行...";
+            
+            // 模拟耗时操作
+            for ($i = 0; $i < 5; $i++) {
+                echo "处理步骤 {$i + 1}\n";
+                sleep(1);
+            }
+            
+            输出 "异步任务完成!";
+        };
+    }
+    
+    // 类型检查和匹配
+    public function checkType($value): string {
+        match (true) {
+            case $value instanceof User => "这是一个用户对象",
+            case $value like {"name": string, "age": int} => "这是用户数据结构",
+            case is_array($value) => "这是一个数组",
+            case is_string($value) => "这是一个字符串",
+            default => "未知类型"
+        };
+    }
+}
+
+// 泛型类示例
+class Repository<T> {
+    private array $items = [];
+    
+    public function add(T $item): void {
+        this->items[] = $item;
+    }
+    
+    public function findById(int $id): ?T {
+        return this->items[$id] ?? null;
+    }
+}
+
+// 接口定义
+interface Cacheable {
+    public function getCacheKey(): string;
+    public function getCacheTtl(): int;
+}
+
+// 用户类
+class User implements Cacheable {
+    public function __construct(
+        public string $name,
+        public int $age,
+        public ?string $email = null
+    ) {}
+    
+    public function getCacheKey(): string {
+        return "user:{$this->name}";
+    }
+    
+    public function getCacheTtl(): int {
+        return 3600; // 1小时
+    }
+}
+
+// 主程序
+echo "=== Origami 语言示例 ===\n";
+
+$controller = new DemoController();
+$user = new User("Alice", 25, "alice@example.com");
+
+// 测试各种功能
+echo $controller->sayHello("Origami");
+echo "\n";
+
+$config = $controller->获取配置();
+echo "配置: " . json_encode($config) . "\n";
+
+// 启动异步任务
+$controller->asyncTask();
+
+echo "程序执行完成!\n";
