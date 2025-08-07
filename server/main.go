@@ -89,7 +89,7 @@ func main() {
 	langServer := server.NewLanguageServer(*verbose)
 
 	// 创建LSP服务器
-	lspServer := lsp.NewServer(langServer, *verbose)
+	lspServer := lsp.NewLSPServer(langServer, *verbose)
 
 	// 运行服务器
 	ctx := context.Background()
@@ -104,7 +104,7 @@ func main() {
 		if *verbose {
 			log.Println("在标准输入输出模式下启动服务器")
 		}
-		err = lspServer.Run(ctx, os.Stdin, os.Stdout)
+		err = lspServer.RunStdio(ctx)
 	}
 
 	if err != nil {

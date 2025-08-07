@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
@@ -255,6 +256,60 @@ func (ls *LanguageServer) findSymbolDefinition(ast *parser.AST, symbol string) *
 		if class.Name == symbol {
 			return &class.Position
 		}
+	}
+	
+	return nil
+}
+
+// CloseDocument 关闭文档
+func (ls *LanguageServer) CloseDocument(uri string) {
+	ls.mutex.Lock()
+	defer ls.mutex.Unlock()
+	
+	if ls.verbose {
+		log.Printf("正在关闭文档: %s", uri)
+	}
+	
+	delete(ls.documents, uri)
+	
+	if ls.verbose {
+		log.Printf("文档已关闭: %s", uri)
+	}
+}
+
+// GetHover 获取指定位置的悬停信息
+func (ls *LanguageServer) GetHover(uri string, line, character int) interface{} {
+	ls.mutex.RLock()
+	defer ls.mutex.RUnlock()
+	
+	if ls.verbose {
+		log.Printf("正在为文档 %s 第 %d 行第 %d 列获取悬停信息", uri, line+1, character+1)
+	}
+	
+	doc, exists := ls.documents[uri]
+	if !exists {
+		if ls.verbose {
+			log.Printf("文档不存在，无法提供悬停信息: %s", uri)
+		}
+		return nil
+	}
+	
+	// 获取当前位置的符号
+	symbol := ls.getSymbolAtPosition(doc.Content, line, character)
+	if symbol == "" {
+		return nil
+	}
+	
+	// 查找符号定义以提供悬停信息
+	if definition := ls.findSymbolDefinition(doc.AST, symbol); definition != nil {
+		hoverText := "**" + symbol + "**\n\n定义位置: 第 " + 
+			fmt.Sprintf("%d", definition.Line+1) + " 行"
+		
+		if ls.verbose {
+			log.Printf("为符号 %s 提供悬停信息", symbol)
+		}
+		
+		return hoverText
 	}
 	
 	return nil

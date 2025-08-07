@@ -38,6 +38,7 @@ exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const path = __importStar(require("path"));
 const net = __importStar(require("net"));
+const os = __importStar(require("os"));
 const node_1 = require("vscode-languageclient/node");
 const child_process_1 = require("child_process");
 let client;
@@ -48,24 +49,56 @@ var CommunicationMode;
     CommunicationMode["STDIO"] = "stdio";
     CommunicationMode["TCP"] = "tcp";
 })(CommunicationMode || (CommunicationMode = {}));
+// 获取语言服务器可执行文件名
+function getLanguageServerExecutableName() {
+    const platform = os.platform();
+    switch (platform) {
+        case "win32":
+            return "origami-language-server.exe";
+        case "darwin":
+            return "origami-language-server";
+        case "linux":
+            return "origami-language-server-linux";
+        default:
+            // 默认使用无扩展名版本（macOS）
+            console.warn(`未知平台: ${platform}，使用默认可执行文件名`);
+            return "origami-language-server";
+    }
+}
+// 检查端口是否可用
+function checkPortAvailable(port) {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        server.listen(port, () => {
+            server.once('close', () => {
+                resolve(true);
+            });
+            server.close();
+        });
+        server.on('error', () => {
+            resolve(false);
+        });
+    });
+}
 function activate(context) {
-    console.log('Origami Language Extension is now active!');
+    console.log("Origami Language Extension is now active!");
     // 获取配置
-    const config = vscode.workspace.getConfiguration('origami');
-    const enabled = config.get('languageServer.enabled', true);
+    const config = vscode.workspace.getConfiguration("origami");
+    const enabled = config.get("languageServer.enabled", true);
     if (!enabled) {
-        console.log('Origami Language Server is disabled');
+        console.log("Origami Language Server is disabled");
         return;
     }
     // 语言服务器配置
-    let serverPath = config.get('languageServer.path', '');
-    const communicationMode = config.get('languageServer.communicationMode', CommunicationMode.TCP);
-    const tcpPort = config.get('languageServer.tcpPort', 8080);
-    const verbose = config.get('languageServer.verbose', false);
-    const logFile = config.get('languageServer.logFile', '');
+    let serverPath = config.get("languageServer.path", "");
+    const communicationMode = config.get("languageServer.communicationMode", CommunicationMode.TCP);
+    const tcpPort = config.get("languageServer.tcpPort", 8081);
+    const verbose = config.get("languageServer.verbose", false);
+    const logFile = config.get("languageServer.logFile", "");
     if (!serverPath) {
         // 默认使用扩展目录下的语言服务器
-        serverPath = path.join(context.extensionPath, 'server', 'origami-language-server.exe');
+        const executableName = getLanguageServerExecutableName();
+        serverPath = path.join(context.extensionPath, "server", executableName);
     }
     // 根据通信模式创建服务器选项
     let serverOptions;
@@ -80,34 +113,54 @@ function activate(context) {
     // 客户端选项
     const clientOptions = {
         // 注册服务器支持的文档选择器
-        documentSelector: [
-            { scheme: 'file', language: 'origami' }
-        ],
+        documentSelector: [{ scheme: "file", language: "origami" }],
         synchronize: {
             // 监听工作区中 .cjp 和 .cj 文件的变化
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{cjp,cj}')
-        }
+            fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{cjp,cj}"),
+        },
     };
     // 创建语言客户端并启动
-    client = new node_1.LanguageClient('origami-language-server', 'Origami Language Server', serverOptions, clientOptions);
+    client = new node_1.LanguageClient("origami-language-server", "Origami Language Server", serverOptions, clientOptions);
     // 启动客户端
-    startLanguageServer(communicationMode, tcpPort).then(() => {
-        console.log(`Origami Language Server started successfully in ${communicationMode} mode`);
-        if (communicationMode === CommunicationMode.TCP) {
-            console.log(`TCP Port: ${tcpPort}`);
-        }
-    }).catch((error) => {
-        console.error('Failed to start Origami Language Server:', error);
-        vscode.window.showErrorMessage(`Failed to start Origami Language Server: ${error.message}`);
-    });
+    if (communicationMode === CommunicationMode.TCP) {
+        // TCP模式下先检查端口可用性
+        checkPortAvailable(tcpPort)
+            .then((available) => {
+            if (!available) {
+                throw new Error(`Port ${tcpPort} is already in use. Please choose a different port in settings.`);
+            }
+            return startLanguageServer(communicationMode, tcpPort);
+        })
+            .then(() => {
+            console.log(`Origami Language Server started successfully in ${communicationMode} mode on port ${tcpPort}`);
+        })
+            .catch((error) => {
+            console.error("Failed to start Origami Language Server:", error);
+            vscode.window.showErrorMessage(`Failed to start Origami Language Server: ${error.message}`);
+        });
+    }
+    else {
+        // STDIO模式直接启动
+        startLanguageServer(communicationMode, tcpPort)
+            .then(() => {
+            console.log(`Origami Language Server started successfully in ${communicationMode} mode`);
+        })
+            .catch((error) => {
+            console.error("Failed to start Origami Language Server:", error);
+            vscode.window.showErrorMessage(`Failed to start Origami Language Server: ${error.message}`);
+        });
+    }
     // 注册命令
-    const restartCommand = vscode.commands.registerCommand('origami.restartLanguageServer', () => {
+    const restartCommand = vscode.commands.registerCommand("origami.restartLanguageServer", () => {
         if (client) {
-            stopLanguageServer().then(() => {
+            stopLanguageServer()
+                .then(() => {
                 return startLanguageServer(communicationMode, tcpPort);
-            }).then(() => {
-                vscode.window.showInformationMessage('Origami Language Server restarted');
-            }).catch((error) => {
+            })
+                .then(() => {
+                vscode.window.showInformationMessage("Origami Language Server restarted");
+            })
+                .catch((error) => {
                 vscode.window.showErrorMessage(`Failed to restart Origami Language Server: ${error.message}`);
             });
         }
@@ -119,69 +172,111 @@ function createTcpServerOptions(serverPath, port, verbose, logFile) {
     return () => {
         return new Promise((resolve, reject) => {
             // 构建服务器启动参数
-            const args = ['--port', port.toString()];
+            const args = ["--port", port.toString()];
             if (verbose) {
-                args.push('--verbose');
+                args.push("--verbose");
             }
             if (logFile) {
-                args.push('--log', logFile);
+                args.push("--log", logFile);
             }
             // 启动独立的语言服务器进程
-            console.log(`Starting language server: ${serverPath} ${args.join(' ')}`);
+            console.log(`Starting language server: ${serverPath} ${args.join(" ")}`);
             serverProcess = (0, child_process_1.spawn)(serverPath, args, {
-                stdio: 'pipe',
-                detached: false
+                stdio: "pipe",
+                detached: false,
             });
             if (!serverProcess) {
-                reject(new Error('Failed to spawn language server process'));
+                reject(new Error("Failed to spawn language server process"));
                 return;
             }
             // 监听进程错误
-            serverProcess.on('error', (error) => {
-                console.error('Language server process error:', error);
+            serverProcess.on("error", (error) => {
+                console.error("Language server process error:", error);
                 reject(error);
             });
-            serverProcess.on('exit', (code, signal) => {
+            serverProcess.on("exit", (code, signal) => {
                 console.log(`Language server process exited with code ${code}, signal ${signal}`);
+                if (code !== 0) {
+                    reject(new Error(`Language server exited with code ${code}`));
+                }
             });
+            // 监听进程输出以便调试
+            if (serverProcess.stdout) {
+                serverProcess.stdout.on('data', (data) => {
+                    console.log(`Language server stdout: ${data}`);
+                });
+            }
+            if (serverProcess.stderr) {
+                serverProcess.stderr.on('data', (data) => {
+                    console.error(`Language server stderr: ${data}`);
+                });
+            }
             // 等待服务器启动
-            setTimeout(() => {
-                const socket = net.connect(port, 'localhost');
-                socket.on('connect', () => {
+            let retryCount = 0;
+            const maxRetries = 15;
+            const retryInterval = 1000; // 1秒
+            const tryConnect = () => {
+                retryCount++;
+                console.log(`Attempting to connect to language server (attempt ${retryCount}/${maxRetries})`);
+                const socket = net.connect(port, "localhost");
+                // 设置连接超时
+                socket.setTimeout(5000);
+                socket.on("connect", () => {
                     console.log(`Connected to language server on port ${port}`);
+                    socket.setTimeout(0); // 清除超时
+                    // 设置socket选项以保持连接稳定
+                    socket.setKeepAlive(true, 30000);
+                    socket.setNoDelay(true);
                     resolve({
                         reader: socket,
-                        writer: socket
+                        writer: socket,
                     });
                 });
-                socket.on('error', (error) => {
-                    console.error('Failed to connect to language server:', error);
-                    reject(error);
+                socket.on("timeout", () => {
+                    console.error(`Connection attempt ${retryCount} timed out`);
+                    socket.destroy();
+                    if (retryCount < maxRetries) {
+                        setTimeout(tryConnect, retryInterval);
+                    }
+                    else {
+                        reject(new Error(`Failed to connect to language server after ${maxRetries} attempts: connection timeout`));
+                    }
                 });
-            }, 2000); // 等待2秒让服务器启动
+                socket.on("error", (error) => {
+                    console.error(`Connection attempt ${retryCount} failed:`, error.message);
+                    if (retryCount < maxRetries) {
+                        setTimeout(tryConnect, retryInterval);
+                    }
+                    else {
+                        reject(new Error(`Failed to connect to language server after ${maxRetries} attempts: ${error.message}`));
+                    }
+                });
+            };
+            // 等待5秒让服务器完全启动，然后开始连接尝试
+            setTimeout(tryConnect, 5000);
         });
     };
 }
 // 创建STDIO模式的服务器选项
 function createStdioServerOptions(serverPath, verbose, logFile) {
-    const args = ['--stdio'];
+    const args = ["--stdio"];
     if (verbose) {
-        args.push('--verbose');
+        args.push("--verbose");
     }
     if (logFile) {
-        args.push('--log', logFile);
+        args.push("--log", logFile);
     }
     return {
         run: {
             command: serverPath,
             args: args,
-            transport: node_1.TransportKind.stdio
+            transport: node_1.TransportKind.stdio,
         },
         debug: {
             command: serverPath,
             args: args,
-            transport: node_1.TransportKind.stdio
-        }
+            transport: node_1.TransportKind.stdio,
+        },
     };
 }
 // 启动语言服务器
@@ -191,7 +286,7 @@ async function startLanguageServer(mode, port) {
         console.log(`Language server started in ${mode} mode`);
     }
     catch (error) {
-        console.error('Failed to start language server:', error);
+        console.error("Failed to start language server:", error);
         throw error;
     }
 }
@@ -200,23 +295,23 @@ async function stopLanguageServer() {
     try {
         if (client) {
             await client.stop();
-            console.log('Language client stopped');
+            console.log("Language client stopped");
         }
         // 如果是TCP模式，需要手动终止服务器进程
         if (serverProcess) {
-            console.log('Terminating language server process');
-            serverProcess.kill('SIGTERM');
+            console.log("Terminating language server process");
+            serverProcess.kill("SIGTERM");
             serverProcess = undefined;
         }
     }
     catch (error) {
-        console.error('Error stopping language server:', error);
+        console.error("Error stopping language server:", error);
         throw error;
     }
 }
 function deactivate() {
     return stopLanguageServer().catch((error) => {
-        console.error('Error during deactivation:', error);
+        console.error("Error during deactivation:", error);
     });
 }
 //# sourceMappingURL=extension.js.map

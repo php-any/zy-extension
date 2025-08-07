@@ -1,140 +1,167 @@
 # Origami Language Extension 安装指南
 
-## 方法一：通过 VS Code 界面安装（推荐）
+## 系统要求
 
-1. 打开 VS Code
-2. 按 `Ctrl+Shift+P` 打开命令面板
-3. 输入 "Extensions: Install from VSIX..."
-4. 浏览并选择 `origami-language-0.0.1.vsix` 文件
-5. 点击安装，等待安装完成
-6. 重启 VS Code
+- Visual Studio Code 1.74.0 或更高版本
+- 支持的操作系统：
+  - Windows 10 或更高版本
+  - macOS 10.15 或更高版本
+  - Linux (Ubuntu 18.04+ 或其他现代发行版)
 
-## 方法二：通过命令行安装
+## 安装方法
 
-**注意**: 如果遇到路径问题，请使用绝对路径
+### 方法一：从 VSIX 文件安装
 
-```bash
-# 进入扩展文件所在目录
-cd "d:\github.cocm\php-any\zy-extension"
+1. 下载最新的 `.vsix` 文件
+2. 打开 VS Code
+3. 按 `Ctrl+Shift+P` (Windows/Linux) 或 `Cmd+Shift+P` (macOS) 打开命令面板
+4. 输入 "Extensions: Install from VSIX..."
+5. 选择下载的 `.vsix` 文件
 
-# 使用绝对路径安装
-code --install-extension "d:\github.cocm\php-any\zy-extension\origami-language-0.0.1.vsix"
-```
+### 方法二：从源码构建
 
-## 方法三：开发模式安装
+1. 克隆仓库：
+   ```bash
+   git clone https://github.com/your-username/origami-vscode-extension.git
+   cd origami-vscode-extension
+   ```
 
-如果上述方法都失败，可以使用开发模式：
+2. 安装依赖：
+   ```bash
+   npm install
+   ```
 
-1. 打开 VS Code
-2. 按 `F5` 或 `Ctrl+Shift+P` 输入 "Debug: Start Debugging"
-3. 选择 "VS Code Extension Development"
-4. 这将打开一个新的 VS Code 窗口，扩展已自动加载
+3. 构建语言服务器（所有平台）：
+   ```bash
+   cd server
+   ./build.sh
+   ```
 
-## 方法四：手动复制安装
+4. 编译扩展：
+   ```bash
+   cd ..
+   npx tsc -p ./
+   ```
 
-1. 解压 `origami-language-0.0.1.vsix` 文件（重命名为 .zip 后解压）
-2. 将解压后的文件夹复制到 VS Code 扩展目录：
-   - Windows: `%USERPROFILE%\.vscode\extensions\origami-language-0.0.1\`
-   - macOS: `~/.vscode/extensions/origami-language-0.0.1/`
-   - Linux: `~/.vscode/extensions/origami-language-0.0.1/`
-3. 重启 VS Code
+5. 打包扩展：
+   ```bash
+   npm install -g vsce
+   vsce package
+   ```
+
+6. 安装生成的 `.vsix` 文件
+
+## 跨平台支持
+
+扩展会自动检测你的操作系统并使用相应的语言服务器可执行文件：
+
+- **Windows**: `origami-language-server.exe`
+- **macOS**: `origami-language-server`
+- **Linux**: `origami-language-server-linux`
+
+## 配置
+
+安装完成后，你可以在 VS Code 设置中配置 Origami 语言服务器：
+
+- `origami.languageServer.enabled`: 启用/禁用语言服务器
+- `origami.languageServer.path`: 自定义语言服务器路径
+- `origami.languageServer.communicationMode`: 通信模式 (stdio/tcp)
+- `origami.languageServer.tcpPort`: TCP 端口号 (默认 8081)
+- `origami.languageServer.verbose`: 启用详细日志
+- `origami.languageServer.logFile`: 日志文件路径
 
 ## 验证安装
 
-1. 创建一个新文件，保存为 `.cjp` 或 `.cj` 扩展名
-2. 输入以下代码测试语法高亮：
-
-```php
-<?php
-namespace Test;
-
-@Controller
-class TestController {
-    public function test(): string {
-        $message = "Hello {$name}!";
-        return $message;
-    }
-    
-    函数 测试(): void {
-        输出 "中文关键字测试";
-    }
-}
-```
-
-3. 如果看到语法高亮，说明安装成功！
+1. 创建一个新文件，保存为 `.cjp` 扩展名
+2. 输入一些 Origami 代码：
+   ```origami
+   函数 测试() {
+       打印("Hello, Origami!");
+   }
+   
+   测试();
+   ```
+3. 检查是否有语法高亮和代码补全功能
 
 ## 故障排除
 
-### 常见问题解决方案
+如果遇到问题，请检查：
 
-#### 1. 命令行安装失败
-如果 `code --install-extension` 命令失败：
+1. **VS Code 版本**是否符合要求
+2. **扩展是否正确安装**
+3. **语言服务器可执行文件**是否存在且有执行权限
+4. 查看 **VS Code 开发者控制台**的错误信息
+5. 检查 **输出面板**中的 "Origami Language Server" 日志
 
-- **解决方案 A**: 使用 VS Code 界面安装（方法一）
-- **解决方案 B**: 尝试以管理员身份运行命令提示符
-- **解决方案 C**: 检查 VS Code 是否正确添加到系统 PATH
+### 常见问题
 
-#### 2. 权限问题
-```bash
-# Windows: 以管理员身份运行 PowerShell
-Start-Process powershell -Verb runAs
+#### macOS 上语言服务器无法启动
+- 确保 `server/origami-language-server` 文件有执行权限：
+  ```bash
+  chmod +x server/origami-language-server
+  ```
 
-# 然后执行安装命令
-code --install-extension "d:\github.cocm\php-any\zy-extension\origami-language-0.0.1.vsix"
-```
+#### Linux 上语言服务器无法启动
+- 确保 `server/origami-language-server-linux` 文件有执行权限：
+  ```bash
+  chmod +x server/origami-language-server-linux
+  ```
 
-#### 3. VS Code 版本兼容性
-- 确保 VS Code 版本 >= 1.102.0
-- 更新到最新版本：Help → Check for Updates
+#### Windows 上语言服务器无法启动
+- 检查是否被杀毒软件阻止
+- 确保 `server/origami-language-server.exe` 文件存在
 
-#### 4. 手动验证扩展文件
-```bash
-# 检查文件是否存在和大小
-dir "d:\github.cocm\php-any\zy-extension\origami-language-0.0.1.vsix"
+#### TCP 端口冲突
+如果遇到 "Port already in use" 错误：
 
-# 文件大小应该约为 9-10 KB
-```
+1. **检查端口占用**：
+   ```bash
+   # macOS/Linux
+   lsof -i :8081
+   
+   # Windows
+   netstat -ano | findstr :8081
+   ```
 
-#### 5. 开发模式测试（推荐）
-如果所有安装方法都失败，使用开发模式：
+2. **更改端口**：
+   - 打开 VS Code 设置
+   - 搜索 "origami.languageServer.tcpPort"
+   - 修改为其他可用端口（如 8082, 8083 等）
 
-1. 在 VS Code 中打开扩展项目文件夹：`d:\github.cocm\php-any\zy-extension`
-2. 按 `F5` 启动调试
-3. 选择 "VS Code Extension Development"
-4. 新窗口中扩展会自动加载
+3. **终止占用进程**：
+   ```bash
+   # macOS/Linux
+   pkill -f origami-language-server
+   
+   # Windows
+   taskkill /f /im origami-language-server.exe
+   ```
 
-#### 6. 检查扩展状态
-安装后检查：
+4. **使用 STDIO 模式**：
+   - 将 `origami.languageServer.communicationMode` 设置为 "stdio"
+   - 这样可以避免端口冲突问题
 
-1. 打开 VS Code 扩展面板 (Ctrl+Shift+X)
-2. 搜索 "Origami" 或 "origami-language"
-3. 确认扩展已启用
-4. 重启 VS Code
+### 调试模式
 
-#### 7. 清理和重试
-如果多次安装失败：
+如果需要调试语言服务器，可以启用详细日志：
 
-```bash
-# 清理可能的残留文件
-code --uninstall-extension origami-lang.origami-language
+1. 打开 VS Code 设置
+2. 搜索 "origami"
+3. 启用 `origami.languageServer.verbose`
+4. 设置 `origami.languageServer.logFile` 为日志文件路径
+5. 重启 VS Code
 
-# 重新打包
-vsce package
+## 卸载
 
-# 重新安装
-code --install-extension origami-language-0.0.1.vsix
-```
+在 VS Code 扩展面板中找到 "Origami Language Support" 并点击卸载。
 
-## 功能特性
+## 支持
 
-- ✅ `.cjp` 和 `.cj` 文件语法高亮
-- ✅ 中文关键字支持
-- ✅ 字符串插值语法
-- ✅ 注解语法高亮
-- ✅ 自动括号配对
-- ✅ 智能缩进
-- ✅ 代码折叠
+如果遇到问题，请：
 
----
-
-**注意**: 这是 Origami 语言扩展的初始版本，如有问题请反馈！
+1. 查看项目的 [GitHub Issues](https://github.com/your-username/origami-vscode-extension/issues)
+2. 提交新的 Issue 并包含：
+   - 操作系统版本
+   - VS Code 版本
+   - 错误信息
+   - 重现步骤
