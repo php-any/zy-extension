@@ -1,0 +1,34 @@
+<?php
+// 这是一个简单的 Origami 测试文件
+
+// 变量定义
+$message = "Hello, Origami!";
+$number = 42;
+$sum = 10 + 20;
+
+// 函数定义
+function greet($name) {
+    return "Hello, " . $name . "!";
+}
+
+// 类定义
+class Calculator {
+    public function add($a, $b) {
+        return $a + $b;
+    }
+    
+    public function multiply($a, $b) {
+        return $a * $b;
+    }
+}
+
+// 输出
+echo $message;
+echo "Number: " . $number;
+echo "Sum: " . $sum;
+echo greet("World");
+
+// 使用类
+$calc = new Calculator();
+echo "Addition: " . $calc->add(5, 3);
+echo "Multiplication: " . $calc->multiply(4, 6);

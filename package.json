@@ -60,38 +60,7 @@
         "origami.languageServer.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "启用/禁用 Origami 语言服务器"
-        },
-        "origami.languageServer.path": {
-          "type": "string",
-          "default": "",
-          "description": "Origami 语言服务器可执行文件路径（留空使用默认路径）"
-        },
-        "origami.languageServer.communicationMode": {
-          "type": "string",
-          "enum": [
-            "stdio",
-            "tcp"
-          ],
-          "default": "tcp",
-          "description": "语言服务器通信模式：stdio（标准输入输出）或 tcp（TCP网络连接）"
-        },
-        "origami.languageServer.tcpPort": {
-          "type": "number",
-          "default": 8081,
-          "minimum": 1024,
-          "maximum": 65535,
-          "description": "TCP模式下使用的端口号"
-        },
-        "origami.languageServer.verbose": {
-          "type": "boolean",
-          "default": false,
-          "description": "启用详细日志输出"
-        },
-        "origami.languageServer.logFile": {
-          "type": "string",
-          "default": "",
-          "description": "日志文件路径（留空输出到控制台）"
+          "description": "启用/禁用 Origami 语言服务器（固定连接到 localhost:8800）"
         }
       }
     }
