@@ -75,29 +75,56 @@ $result = $array
     ->reduce(fn($acc, $x) => $acc + $x, 0);
 ```
 
-## 安装
+## 安装和使用
+
+### 前提条件
+
+在使用此扩展之前，你需要在本地启动 Origami 语言服务器：
+
+1. **确保语言服务器在 `localhost:8800` 端口运行**
+2. 扩展会自动连接到此端口
+
+### 启动语言服务器
+
+扩展会自动连接到 `localhost:8800` 端口的语言服务器。请确保你的语言服务器在此端口运行。
+
+例如：
+```bash
+# 启动语言服务器（示例命令）
+origami-language-server --port 8800
+```
+
+### 安装扩展
 
 1. 在 VS Code 中打开扩展面板 (Ctrl+Shift+X)
 2. 搜索 "Origami Language Support"
 3. 点击安装
 
-或者从 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=origami-lang.origami-language) 安装。
-
-## 使用
+### 开始使用
 
 1. 创建 `.cjp` 或 `.cj` 文件
 2. 开始编写 origami 代码
 3. 享受语法高亮和代码提示
-
-### 📚 快速开始
-- [快速使用指南](QUICK_START.md) - 新用户必读
-- [语言服务器修复文档](LANGUAGE_SERVER_FIX.md) - 连接问题解决方案
 
 ### 🔧 语言服务器功能
 - **代码补全**: 智能代码提示和自动完成
 - **定义跳转**: 快速跳转到函数和变量定义
 - **悬停提示**: 鼠标悬停查看符号信息
 - **语法检查**: 实时语法错误检测
+
+## 配置
+
+可以在 VS Code 设置中配置语言服务器选项：
+
+- `origami.languageServer.enabled`: 启用/禁用语言服务器（固定连接到 localhost:8800）
+
+## 调试
+
+如果连接失败，请检查：
+
+1. 语言服务器是否在 `localhost:8800` 端口运行
+2. 防火墙是否阻止了连接
+3. 查看 VS Code 开发者控制台的错误信息
 
 ## 示例代码
 
@@ -134,6 +161,22 @@ spawn {
 };
 ```
 
+## 开发
+
+```bash
+# 克隆仓库
+git clone https://github.com/your-username/origami-vscode-extension.git
+
+# 安装依赖
+npm install
+
+# 编译
+npm run compile
+
+# 运行扩展
+F5 (在 VS Code 中)
+```
+
 ## 相关链接
 
 - [Origami 语言源码](https://github.com/your-username/origami)
@@ -147,7 +190,3 @@ spawn {
 ## 许可证
 
 MIT License
-
----
-
-**代码绝对路径**: `D:\github.cocm\php-any\origami`
