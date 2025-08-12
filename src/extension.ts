@@ -66,8 +66,8 @@ export function activate(context: vscode.ExtensionContext) {
     // 注册服务器支持的文档选择器
     documentSelector: [{ scheme: "file", language: "origami" }],
     synchronize: {
-      // 监听工作区中 .cjp 和 .cj 文件的变化
-      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{cjp,cj}"),
+      // 监听工作区中 .ori 和 .cjp 文件的变化
+      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{ori,cjp}"),
     },
   };
 

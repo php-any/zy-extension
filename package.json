@@ -36,8 +36,8 @@
           "折言"
         ],
         "extensions": [
-          ".cjp",
-          ".cj"
+          ".ori",
+          ".cjp"
         ],
         "configuration": "./language-configuration.json",
         "icon": {
