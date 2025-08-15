@@ -1,12 +1,12 @@
 {
-  "name": "origami-language",
-  "displayName": "Origami Language Support",
-  "description": "折言(origami-lang) 语言支持 - 融合 PHP 与 Go 特性的创新脚本语言",
-  "version": "0.0.1",
+  "name": "zy-lang",
+  "displayName": "ZY Language Support",
+  "description": "折言(zy-lang) 语言支持 - 融合 PHP 与 Go 特性的创新脚本语言",
+  "version": "1.0.0",
   "publisher": "origami-lang",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/origami-vscode-extension"
+    "url": "https://github.com/php-any/zy-extension"
   },
   "engines": {
     "vscode": "^1.102.0"
@@ -71,7 +71,12 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "publish:patch": "vsce publish patch",
+    "publish:minor": "vsce publish minor",
+    "publish:major": "vsce publish major"
   },
   "devDependencies": {
     "@types/node": "^24.2.0",
