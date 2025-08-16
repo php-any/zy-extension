@@ -33,18 +33,16 @@ function createStdioServerOptions(): ServerOptions {
 // 创建TCP服务器选项
 function createTcpServerOptions(): ServerOptions {
   return () => {
-    return new Promise<StreamInfo>((resolve, reject) => {
-      console.log(`正在连接到语言服务器 localhost:${LANGUAGE_SERVER_PORT}`);
+          return new Promise<StreamInfo>((resolve, reject) => {
+        console.log(`[Extension] 正在连接到语言服务器 localhost:${LANGUAGE_SERVER_PORT}`);
 
-      const socket = net.connect(LANGUAGE_SERVER_PORT, "localhost");
+        const socket = net.connect(LANGUAGE_SERVER_PORT, "localhost");
 
       // 设置连接超时
       socket.setTimeout(5000);
 
       socket.on("connect", () => {
-        vscode.window.showInformationMessage(
-          `已连接到端口 ${LANGUAGE_SERVER_PORT} 的语言服务器`
-        );
+        console.log(`[Extension] 已连接到端口 ${LANGUAGE_SERVER_PORT} 的语言服务器`);
         socket.setTimeout(0); // 清除超时
 
         // 设置socket选项以保持连接稳定
@@ -58,7 +56,7 @@ function createTcpServerOptions(): ServerOptions {
       });
 
       socket.on("timeout", () => {
-        vscode.window.showErrorMessage("连接超时");
+        console.error("[Extension] 连接超时");
         socket.destroy();
         reject(
           new Error(
@@ -68,7 +66,7 @@ function createTcpServerOptions(): ServerOptions {
       });
 
       socket.on("error", (error) => {
-        vscode.window.showErrorMessage(`连接失败: ${error.message}`);
+        console.error(`[Extension] 连接失败: ${error.message}`);
         reject(
           new Error(
             `连接到端口 ${LANGUAGE_SERVER_PORT} 的语言服务器失败：${error.message}`
@@ -79,19 +77,8 @@ function createTcpServerOptions(): ServerOptions {
   };
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   vscode.window.showInformationMessage("折言语言扩展已激活！");
-
-  // 初始化ZyLspDetector（这会自动处理PATH注入）
-  const detector = ZyLspDetector.getInstance();
-  detector
-    .initializePath()
-    .then(() => {
-      vscode.window.showInformationMessage("PATH环境初始化完成");
-    })
-    .catch((error) => {
-      vscode.window.showWarningMessage(`PATH初始化失败: ${error.message}`);
-    });
 
   // 获取配置
   const config = vscode.workspace.getConfiguration("origami");
@@ -102,8 +89,18 @@ export function activate(context: vscode.ExtensionContext) {
     return;
   }
 
-  // 检查并选择服务器选项
-  checkZyLspCommand().then((hasZyLsp) => {
+  try {
+    // 初始化ZyLspDetector（这会自动处理PATH注入）
+    console.log("[Extension] 开始初始化 zy-lsp 检测器...");
+    const detector = ZyLspDetector.getInstance();
+    
+    // 等待初始化完成
+    await detector.initializePath();
+    console.log("[Extension] PATH环境初始化完成");
+
+    // 检查并选择服务器选项
+    console.log("[Extension] 开始检测 zy-lsp 命令...");
+    const hasZyLsp = await checkZyLspCommand();
     let serverOptions: ServerOptions;
     let connectionType: string;
 
@@ -140,48 +137,47 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // 启动客户端
-    startLanguageServer()
-      .then(() => {
-        if (connectionType === "stdio") {
-          vscode.window.showInformationMessage(
-            "折言语言服务器已通过stdio方式成功启动"
-          );
-        } else {
-          vscode.window.showInformationMessage(
-            `折言语言服务器已成功连接到端口 ${LANGUAGE_SERVER_PORT}`
-          );
-        }
-      })
-      .catch((error) => {
-        if (connectionType === "stdio") {
-          vscode.window.showErrorMessage(
-            `启动折言语言服务器失败: ${error.message}。请确保zy-lsp命令可用。`
-          );
-        } else {
-          vscode.window.showErrorMessage(
-            `连接折言语言服务器失败 localhost:${LANGUAGE_SERVER_PORT}: ${error.message}。请确保服务器正在运行。`
-          );
-        }
-      });
-  });
+    try {
+      await startLanguageServer();
+      if (connectionType === "stdio") {
+        vscode.window.showInformationMessage(
+          "折言语言服务器已通过stdio方式成功启动"
+        );
+      } else {
+        vscode.window.showInformationMessage(
+          `折言语言服务器已成功连接到端口 ${LANGUAGE_SERVER_PORT}`
+        );
+      }
+         } catch (error) {
+       if (connectionType === "stdio") {
+         vscode.window.showErrorMessage(
+           `启动折言语言服务器失败: ${error instanceof Error ? error.message : String(error)}。请确保zy-lsp命令可用。`
+         );
+       } else {
+         vscode.window.showErrorMessage(
+           `连接折言语言服务器失败 localhost:${LANGUAGE_SERVER_PORT}: ${error instanceof Error ? error.message : String(error)}。请确保服务器正在运行。`
+         );
+       }
+     }
+  } catch (error) {
+    vscode.window.showErrorMessage(`扩展激活失败: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
   // 注册重启命令
   const restartCommand = vscode.commands.registerCommand(
     "origami.restartLanguageServer",
-    () => {
+    async () => {
       if (client) {
-        stopLanguageServer()
-          .then(() => {
-            return startLanguageServer();
-          })
-          .then(() => {
-            vscode.window.showInformationMessage("折言语言服务器已重新连接");
-          })
-          .catch((error) => {
-            vscode.window.showErrorMessage(
-              `重新连接折言语言服务器失败：${error.message}`
-            );
-          });
+        try {
+          console.log("[Extension] 正在重启折言语言服务器...");
+          await stopLanguageServer();
+          await startLanguageServer();
+          vscode.window.showInformationMessage("折言语言服务器已重新连接");
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            `重新连接折言语言服务器失败：${error instanceof Error ? error.message : String(error)}`
+          );
+        }
       }
     }
   );
@@ -193,7 +189,7 @@ export function activate(context: vscode.ExtensionContext) {
 async function startLanguageServer(): Promise<void> {
   try {
     await client.start();
-    vscode.window.showInformationMessage("语言服务器启动成功");
+    console.log("[Extension] 语言服务器启动成功");
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`启动语言服务器失败: ${errorMessage}`);
@@ -206,7 +202,7 @@ async function stopLanguageServer(): Promise<void> {
   try {
     if (client) {
       await client.stop();
-      vscode.window.showInformationMessage("语言服务器已停止");
+      console.log("[Extension] 语言服务器已停止");
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -216,7 +212,7 @@ async function stopLanguageServer(): Promise<void> {
 }
 
 export function deactivate(): Thenable<void> | undefined {
-  vscode.window.showInformationMessage("正在停用折言语言扩展");
+  console.log("[Extension] 正在停用折言语言扩展");
   return stopLanguageServer().catch((error) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`停用过程中发生错误: ${errorMessage}`);
