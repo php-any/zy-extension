@@ -1,0 +1,21 @@
+# Project Context
+
+This project (`zy-extension`) is the official VS Code extension for the Origami programming language (also known as "折言" or `zy-lang`).
+
+# Core Principles
+
+- **Source of Truth**: All language features, syntax definitions, and behaviors must align strictly with the Origami core project.
+- **Core Project Path**: `/Users/lvluo/Desktop/github.com/php-any/origami`
+  - Refer to this project for the authoritative implementation of the language.
+
+# Tech Stack
+
+- TypeScript
+- VS Code Extension API
+- Language Server Protocol (LSP)
+
+# Development Guidelines
+
+- Ensure compatibility with the Origami Language Server.
+- Use strict typing in TypeScript.
+- Follow VS Code extension best practices.

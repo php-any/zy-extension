@@ -36,8 +36,7 @@
           "折言"
         ],
         "extensions": [
-          ".ori",
-          ".cjp"
+          ".zy"
         ],
         "configuration": "./language-configuration.json",
         "icon": {
@@ -51,6 +50,12 @@
         "language": "origami",
         "scopeName": "source.origami",
         "path": "./syntaxes/origami.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "origami",
+        "path": "./snippets/origami.json"
       }
     ],
     "configuration": {

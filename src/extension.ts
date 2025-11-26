@@ -1,28 +1,45 @@
 import * as vscode from "vscode";
 import * as net from "net";
+import * as path from "path";
+import * as fs from "fs";
 import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
   StreamInfo,
 } from "vscode-languageclient/node";
-import { ZyLspDetector } from "./zy-lsp-detector";
 
 let client: LanguageClient;
 
 // 固定的语言服务器端口
 const LANGUAGE_SERVER_PORT = 8800;
 
-// 使用ZyLspDetector来检查zy-lsp命令
-async function checkZyLspCommand(): Promise<boolean> {
-  const detector = ZyLspDetector.getInstance();
-  return await detector.checkZyLspCommand();
+// 获取打包的 LSP 二进制路径
+function getBundledLspPath(
+  context: vscode.ExtensionContext
+): string | undefined {
+  const isWindows = process.platform === "win32";
+  const binaryName = isWindows ? "zy-lsp.exe" : "zy-lsp";
+  const bundledPath = path.join(context.extensionPath, "bin", binaryName);
+
+  if (fs.existsSync(bundledPath)) {
+    // 确保有执行权限 (非 Windows)
+    if (!isWindows) {
+      try {
+        fs.chmodSync(bundledPath, "755");
+      } catch (e) {
+        console.warn("Failed to set executable permissions:", e);
+      }
+    }
+    return bundledPath;
+  }
+  return undefined;
 }
 
 // 创建stdio服务器选项
-function createStdioServerOptions(): ServerOptions {
+function createStdioServerOptions(commandPath: string): ServerOptions {
   return {
-    command: "zy-lsp",
+    command: commandPath,
     args: [],
     options: {
       cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd(),
@@ -79,19 +96,39 @@ function createTcpServerOptions(): ServerOptions {
   };
 }
 
+function registerArrowTrigger(context: vscode.ExtensionContext) {
+  const disposable = vscode.workspace.onDidChangeTextDocument((event) => {
+    if (event.document.languageId !== "origami") {
+      return;
+    }
+    for (const change of event.contentChanges) {
+      if (change.text !== ">" || change.rangeLength !== 0) {
+        continue;
+      }
+      const position = change.range.start;
+      if (position.character === 0) {
+        continue;
+      }
+      const prevCharRange = new vscode.Range(
+        position.translate(0, -1),
+        position
+      );
+      const prevChar = event.document.getText(prevCharRange);
+      if (prevChar !== "-") {
+        continue;
+      }
+      // 让 VS Code 完成本次文档更新后再触发建议，避免出现旧上下文
+      setTimeout(() => {
+        vscode.commands.executeCommand("editor.action.triggerSuggest");
+      }, 0);
+      break;
+    }
+  });
+  context.subscriptions.push(disposable);
+}
+
 export function activate(context: vscode.ExtensionContext) {
   vscode.window.showInformationMessage("折言语言扩展已激活！");
-
-  // 初始化ZyLspDetector（这会自动处理PATH注入）
-  const detector = ZyLspDetector.getInstance();
-  detector
-    .initializePath()
-    .then(() => {
-      vscode.window.showInformationMessage("PATH环境初始化完成");
-    })
-    .catch((error) => {
-      vscode.window.showWarningMessage(`PATH初始化失败: ${error.message}`);
-    });
 
   // 获取配置
   const config = vscode.workspace.getConfiguration("origami");
@@ -102,68 +139,71 @@ export function activate(context: vscode.ExtensionContext) {
     return;
   }
 
-  // 检查并选择服务器选项
-  checkZyLspCommand().then((hasZyLsp) => {
-    let serverOptions: ServerOptions;
-    let connectionType: string;
+  // 优先使用打包的 LSP 二进制
+  const bundledLspPath = getBundledLspPath(context);
+  let serverOptions: ServerOptions;
+  let connectionType: string;
 
-    if (hasZyLsp) {
-      serverOptions = createStdioServerOptions();
-      connectionType = "stdio";
+  // 检查是否处于调试模式
+  const isDebugMode =
+    context.extensionMode === vscode.ExtensionMode.Development;
+
+  if (!isDebugMode && bundledLspPath) {
+    serverOptions = createStdioServerOptions(bundledLspPath);
+    connectionType = "stdio";
+    vscode.window.showInformationMessage(
+      `使用内置语言服务器: ${bundledLspPath}`
+    );
+  } else {
+    // 降级到 TCP 模式 (用于开发调试或手动启动的服务)
+    serverOptions = createTcpServerOptions();
+    connectionType = "TCP";
+
+    if (isDebugMode) {
       vscode.window.showInformationMessage(
-        "检测到zy-lsp命令，使用stdio方式启动语言服务器"
+        "开发模式：使用TCP方式连接语言服务器 (localhost:8800)"
       );
     } else {
-      serverOptions = createTcpServerOptions();
-      connectionType = "TCP";
       vscode.window.showInformationMessage(
-        "未检测到zy-lsp命令，使用TCP方式连接语言服务器"
+        "未检测到内置语言服务器，尝试使用TCP方式连接 (localhost:8800)"
       );
     }
+  }
 
-    // 客户端选项
-    const clientOptions: LanguageClientOptions = {
-      // 注册服务器支持的文档选择器
-      documentSelector: [{ scheme: "file", language: "origami" }],
-      synchronize: {
-        // 监听工作区中 .ori 和 .cjp 文件的变化
-        fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{ori,cjp}"),
-      },
-    };
+  // 客户端选项
+  const clientOptions: LanguageClientOptions = {
+    // 注册服务器支持的文档选择器
+    documentSelector: [{ scheme: "file", language: "origami" }],
+    synchronize: {
+      // 监听工作区中 .zy 文件的变化
+      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.zy"),
+    },
+  };
 
-    // 创建语言客户端
-    client = new LanguageClient(
-      "origami-language-server",
-      "折言语言服务器",
-      serverOptions,
-      clientOptions
-    );
+  // 创建语言客户端
+  client = new LanguageClient(
+    "origami-language-server",
+    "折言语言服务器",
+    serverOptions,
+    clientOptions
+  );
 
-    // 启动客户端
-    startLanguageServer()
-      .then(() => {
-        if (connectionType === "stdio") {
-          vscode.window.showInformationMessage(
-            "折言语言服务器已通过stdio方式成功启动"
-          );
-        } else {
-          vscode.window.showInformationMessage(
-            `折言语言服务器已成功连接到端口 ${LANGUAGE_SERVER_PORT}`
-          );
-        }
-      })
-      .catch((error) => {
-        if (connectionType === "stdio") {
-          vscode.window.showErrorMessage(
-            `启动折言语言服务器失败: ${error.message}。请确保zy-lsp命令可用。`
-          );
-        } else {
-          vscode.window.showErrorMessage(
-            `连接折言语言服务器失败 localhost:${LANGUAGE_SERVER_PORT}: ${error.message}。请确保服务器正在运行。`
-          );
-        }
-      });
-  });
+  // 启动客户端
+  startLanguageServer()
+    .then(() => {
+      if (connectionType === "stdio") {
+        vscode.window.showInformationMessage(
+          "折言语言服务器已通过stdio方式成功启动"
+        );
+      } else {
+        vscode.window.showInformationMessage(
+          `折言语言服务器已成功连接到端口 ${LANGUAGE_SERVER_PORT}`
+        );
+      }
+    })
+    .catch((error) => {
+      vscode.window.showErrorMessage(`启动语言服务器失败: ${error.message}`);
+    });
 
   // 注册重启命令
   const restartCommand = vscode.commands.registerCommand(
@@ -187,6 +227,8 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(restartCommand);
+
+  registerArrowTrigger(context);
 }
 
 // 启动语言服务器
