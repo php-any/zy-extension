@@ -76,12 +76,12 @@ function createStdioServerOptions(commandPath) {
 function createTcpServerOptions() {
     return () => {
         return new Promise((resolve, reject) => {
-            console.log(`正在连接到语言服务器 localhost:${LANGUAGE_SERVER_PORT}`);
+            console.log(`[Extension] 正在连接到语言服务器 localhost:${LANGUAGE_SERVER_PORT}`);
             const socket = net.connect(LANGUAGE_SERVER_PORT, "localhost");
             // 设置连接超时
             socket.setTimeout(5000);
             socket.on("connect", () => {
-                vscode.window.showInformationMessage(`已连接到端口 ${LANGUAGE_SERVER_PORT} 的语言服务器`);
+                console.log(`[Extension] 已连接到端口 ${LANGUAGE_SERVER_PORT} 的语言服务器`);
                 socket.setTimeout(0); // 清除超时
                 // 设置socket选项以保持连接稳定
                 socket.setKeepAlive(true, 30000);
@@ -92,12 +92,12 @@ function createTcpServerOptions() {
                 });
             });
             socket.on("timeout", () => {
-                vscode.window.showErrorMessage("连接超时");
+                console.error("[Extension] 连接超时");
                 socket.destroy();
                 reject(new Error(`连接到端口 ${LANGUAGE_SERVER_PORT} 的语言服务器失败：连接超时`));
             });
             socket.on("error", (error) => {
-                vscode.window.showErrorMessage(`连接失败: ${error.message}`);
+                console.error(`[Extension] 连接失败: ${error.message}`);
                 reject(new Error(`连接到端口 ${LANGUAGE_SERVER_PORT} 的语言服务器失败：${error.message}`));
             });
         });
@@ -186,18 +186,17 @@ function activate(context) {
         vscode.window.showErrorMessage(`启动语言服务器失败: ${error.message}`);
     });
     // 注册重启命令
-    const restartCommand = vscode.commands.registerCommand("origami.restartLanguageServer", () => {
+    const restartCommand = vscode.commands.registerCommand("origami.restartLanguageServer", async () => {
         if (client) {
-            stopLanguageServer()
-                .then(() => {
-                return startLanguageServer();
-            })
-                .then(() => {
+            try {
+                console.log("[Extension] 正在重启折言语言服务器...");
+                await stopLanguageServer();
+                await startLanguageServer();
                 vscode.window.showInformationMessage("折言语言服务器已重新连接");
-            })
-                .catch((error) => {
-                vscode.window.showErrorMessage(`重新连接折言语言服务器失败：${error.message}`);
-            });
+            }
+            catch (error) {
+                vscode.window.showErrorMessage(`重新连接折言语言服务器失败：${error instanceof Error ? error.message : String(error)}`);
+            }
         }
     });
     context.subscriptions.push(restartCommand);
@@ -207,7 +206,7 @@ function activate(context) {
 async function startLanguageServer() {
     try {
         await client.start();
-        vscode.window.showInformationMessage("语言服务器启动成功");
+        console.log("[Extension] 语言服务器启动成功");
     }
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -220,7 +219,7 @@ async function stopLanguageServer() {
     try {
         if (client) {
             await client.stop();
-            vscode.window.showInformationMessage("语言服务器已停止");
+            console.log("[Extension] 语言服务器已停止");
         }
     }
     catch (error) {
@@ -230,7 +229,7 @@ async function stopLanguageServer() {
     }
 }
 function deactivate() {
-    vscode.window.showInformationMessage("正在停用折言语言扩展");
+    console.log("[Extension] 正在停用折言语言扩展");
     return stopLanguageServer().catch((error) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`停用过程中发生错误: ${errorMessage}`);
