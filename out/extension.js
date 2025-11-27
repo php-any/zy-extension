@@ -109,7 +109,7 @@ function registerArrowTrigger(context) {
             return;
         }
         for (const change of event.contentChanges) {
-            if (change.text !== ">" || change.rangeLength !== 0) {
+            if (change.text !== ">") {
                 continue;
             }
             const position = change.range.start;
@@ -124,7 +124,7 @@ function registerArrowTrigger(context) {
             // 让 VS Code 完成本次文档更新后再触发建议，避免出现旧上下文
             setTimeout(() => {
                 vscode.commands.executeCommand("editor.action.triggerSuggest");
-            }, 0);
+            }, 20);
             break;
         }
     });
