@@ -14,6 +14,8 @@
 
 ### 1. 获取 Personal Access Token (PAT)
 
+**重要**: PAT 必须与你的 VS Code Marketplace Publisher ID 关联。
+
 1. 访问 [Azure DevOps](https://dev.azure.com)
 2. 点击右上角头像 → **Personal access tokens**
 3. 点击 **+ New Token**
@@ -22,8 +24,17 @@
    - **Organization**: 选择你的组织（或 "All accessible organizations"）
    - **Expiration**: 建议选择 1-2 年
    - **Scopes**: 选择 **Custom defined**，然后勾选：
-     - **Marketplace** → **Manage**
+     - **Marketplace** → **Manage**（必须）
+     - **Code** → **Read**（可选，如果需要访问私有仓库）
 5. 点击 **Create** 并复制 Token（只显示一次）
+
+**注意**:
+
+- PAT 必须与你的 Publisher ID (`ctfang`) 关联
+- 如果 PAT 验证失败，请检查：
+  - PAT 是否已过期
+  - PAT 是否有正确的权限（Marketplace → Manage）
+  - Publisher ID 是否正确
 
 ### 2. 配置 GitHub Secret
 

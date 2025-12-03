@@ -116,6 +116,9 @@ jobs:
             echo "Version matches: $TAG_VERSION"
           fi
 
+      - name: Install @vscode/vsce
+        run: npm install -g @vscode/vsce
+
       - name: Publish to VS Code Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
@@ -125,17 +128,21 @@ jobs:
             exit 1
           fi
 
-          # 使用 PAT 登录
-          echo "$VSCE_PAT" | npx vsce login ctfang
+          # 验证 PAT 格式
+          if [ ${#VSCE_PAT} -lt 20 ]; then
+            echo "Error: VSCE_PAT appears to be invalid (too short)"
+            exit 1
+          fi
 
-          # 发布扩展
+          # 直接使用 --pat 参数发布，不需要先登录
+          # 这种方式更可靠，避免了登录步骤可能的问题
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # 手动触发时，使用版本类型
             VERSION_TYPE="${{ github.event.inputs.version }}"
-            npx vsce publish $VERSION_TYPE
+            vsce publish $VERSION_TYPE --pat "$VSCE_PAT"
           else
             # Tag 触发时，直接发布
-            npx vsce publish
+            vsce publish --pat "$VSCE_PAT"
           fi
 
       - name: Create GitHub Release (if tag)
