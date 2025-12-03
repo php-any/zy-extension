@@ -1,4 +1,44 @@
+# VS Code 相关
 .vscode/**
 .vscode-test/**
-.gitignore
+.vscodeignore
+
+# IDE 相关
+.idea/**
+.cursor/**
+
+# 源代码（编译后不需要）
+src/**
+
+# 编译配置
+tsconfig.json
+tsconfig.*.json
+
+# 测试文件
+test-tcp.js
+test.origami
+test/**
+
+# 示例文件
+example.cjp
+
+# 文档和说明
 vsc-extension-quickstart.md
+INSTALL.md
+INSTALL_EXTENSION.md
+
+# Git 相关
+.gitignore
+.git/**
+
+# 打包文件
+*.vsix
+
+# 开发依赖
+node_modules/@types/**
+node_modules/.bin/**
+
+# 其他
+*.log
+.DS_Store
+Thumbs.db

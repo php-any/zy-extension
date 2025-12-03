@@ -1,0 +1,120 @@
+name: Publish VS Code Extension
+
+on:
+    push:
+        tags:
+            - "v*" # 当推送以 v 开头的 tag 时触发，例如 v1.0.4
+    workflow_dispatch: # 允许手动触发
+        inputs:
+            version:
+                description: "Version to publish (patch/minor/major)"
+                required: true
+                default: "patch"
+                type: choice
+                options:
+                    - patch
+                    - minor
+                    - major
+
+jobs:
+    publish:
+        name: Publish to VS Code Marketplace
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # 需要完整的 git 历史记录来生成版本号
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Compile TypeScript
+              run: npm run compile
+
+            - name: Determine version
+              id: version
+              run: |
+                  if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+                    # 手动触发时，使用输入的版本类型
+                    VERSION_TYPE="${{ github.event.inputs.version }}"
+                    echo "version_type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+                  else
+                    # Tag 触发时，从 tag 名称提取版本
+                    TAG_NAME=${GITHUB_REF#refs/tags/}
+                    VERSION=${TAG_NAME#v}  # 移除 v 前缀
+                    echo "version=$VERSION" >> $GITHUB_OUTPUT
+                    echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Update version in package.json (if workflow_dispatch)
+              if: github.event_name == 'workflow_dispatch'
+              run: |
+                  VERSION_TYPE="${{ steps.version.outputs.version_type }}"
+                  npm version $VERSION_TYPE --no-git-tag-version
+                  NEW_VERSION=$(node -p "require('./package.json').version")
+                  echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              id: update_version
+
+            - name: Get final version
+              id: final_version
+              run: |
+                  if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+                    echo "version=${{ steps.update_version.outputs.new_version }}" >> $GITHUB_OUTPUT
+                  else
+                    echo "version=${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Validate version matches package.json
+              if: github.event_name == 'push'
+              run: |
+                  TAG_VERSION="${{ steps.version.outputs.version }}"
+                  PACKAGE_VERSION=$(node -p "require('./package.json').version")
+                  if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+                    echo "Error: Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+                    exit 1
+                  fi
+
+            - name: Publish to VS Code Marketplace
+              env:
+                  VSCE_PAT: ${{ secrets.VSCE_PAT }}
+              run: |
+                  if [ -z "$VSCE_PAT" ]; then
+                    echo "Error: VSCE_PAT secret is not set"
+                    exit 1
+                  fi
+
+                  # 使用 PAT 登录
+                  echo "$VSCE_PAT" | npx vsce login ctfang
+
+                  # 发布扩展
+                  if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+                    # 手动触发时，使用版本类型
+                    VERSION_TYPE="${{ github.event.inputs.version }}"
+                    npx vsce publish $VERSION_TYPE
+                  else
+                    # Tag 触发时，直接发布
+                    npx vsce publish
+                  fi
+
+            - name: Create GitHub Release (if tag)
+              if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: ${{ steps.version.outputs.tag_name }}
+                  release_name: Release ${{ steps.final_version.outputs.version }}
+                  body: |
+                      ## Version ${{ steps.final_version.outputs.version }}
+
+                      See [CHANGELOG.md](CHANGELOG.md) for details.
+                  draft: false
+                  prerelease: false
