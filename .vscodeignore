@@ -34,9 +34,30 @@ INSTALL_EXTENSION.md
 # 打包文件
 *.vsix
 
-# 开发依赖
+# 开发依赖和类型定义
 node_modules/@types/**
 node_modules/.bin/**
+node_modules/**/*.md
+node_modules/**/*.txt
+node_modules/**/*.json
+node_modules/**/LICENSE*
+node_modules/**/CHANGELOG*
+node_modules/**/README*
+node_modules/**/test/**
+node_modules/**/tests/**
+node_modules/**/spec/**
+node_modules/**/docs/**
+node_modules/**/examples/**
+node_modules/**/.github/**
+node_modules/**/.vscode/**
+node_modules/**/tsconfig.json
+node_modules/**/tsconfig.*.json
+
+# 保留必要的 node_modules（只保留运行时需要的）
+# node_modules/vscode-languageclient/**
+# node_modules/vscode-jsonrpc/**
+# node_modules/vscode-languageserver-protocol/**
+# node_modules/vscode-languageserver-types/**
 
 # LSP 二进制文件（需要包含）
 # bin/zy-lsp
@@ -46,3 +67,4 @@ node_modules/.bin/**
 *.log
 .DS_Store
 Thumbs.db
+*.map
