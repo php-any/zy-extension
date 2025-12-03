@@ -119,16 +119,13 @@ jobs:
             echo "Version matches: $TAG_VERSION"
           fi
 
-      - name: Install @vscode/vsce for packaging
-        run: npm install -g @vscode/vsce
-
       - name: Package VSIX
         run: |
-          vsce package
+          npm run package
           ls -lh *.vsix
-          VSIX_FILE=$(ls *.vsix | head -1)
-          echo "vsix_file=$VSIX_FILE" >> $GITHUB_OUTPUT
-        id: package
+
+      - name: Install @vscode/vsce
+        run: npm install -g @vscode/vsce
 
       - name: Publish to VS Code Marketplace
         env:
@@ -168,5 +165,5 @@ jobs:
             See [CHANGELOG.md](CHANGELOG.md) for details.
           draft: false
           prerelease: false
-          files: ${{ steps.package.outputs.vsix_file }}
+          files: "*.vsix"
           token: ${{ secrets.GITHUB_TOKEN }}
