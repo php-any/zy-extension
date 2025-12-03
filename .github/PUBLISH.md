@@ -2,6 +2,14 @@
 
 本项目使用 GitHub Actions 自动发布 VS Code 扩展到 Marketplace。
 
+## 功能特性
+
+- ✅ 自动构建 LSP 服务器（从 origami 仓库）
+- ✅ 自动编译 TypeScript 代码
+- ✅ 自动打包扩展
+- ✅ 自动发布到 VS Code Marketplace
+- ✅ 自动创建 GitHub Release
+
 ## 设置步骤
 
 ### 1. 获取 Personal Access Token (PAT)

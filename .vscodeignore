@@ -38,6 +38,10 @@ INSTALL_EXTENSION.md
 node_modules/@types/**
 node_modules/.bin/**
 
+# LSP 二进制文件（需要包含）
+# bin/zy-lsp
+# bin/zy-lsp.exe
+
 # 其他
 *.log
 .DS_Store
